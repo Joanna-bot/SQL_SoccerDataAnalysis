@@ -21,6 +21,7 @@ from team t
 select * 
 from team_attributes ta 
 
+
 /*GENERAL FINDINGS*/
 
 /*matches per country, league and season*/
@@ -65,18 +66,46 @@ on t.team_api_id = ta.team_api_id
 /*number of vitories, defeats and draws pro team and year*/
 
 select left(v_results.left,4) as year_n, v_results.result, v_results.team_short_name,
-count(result)
+	count(result)
 from v_results
 group by left(v_results.left,4), v_results.team_short_name, v_results.result
 order by count(v_results.result)
 
+/*team ranking*/
 
 
-/*home vs away*/
+select left(v_results.left,4) as year_n, v_results.team_short_name, count(v_results.result) as number_victories,
+	dense_rank() over (partition by left(v_results.left,4) order by count(v_results.result) desc) as ranking
+from v_results
+group by left(v_results.left,4), v_results.team_short_name
+order by left(v_results.left,4), count(v_results.result) desc, 
+	dense_rank() over (partition by left(v_results.left,4) order by count(v_results.result)) 
 
+	
+	
 /*MATCH ANALYSIS*/
 
+/*home team analysis*/
 
+select m.season, t.team_long_name, m.home_team_goal, count(m.match_api_id) as count_match, 
+round(avg(m.home_team_goal) over (partition by m.home_team_api_id, m.season),2) as avg_per_team
+from "_Match" m 
+join team t 
+on t.team_api_id = m.home_team_api_id 
+join team_attributes ta 
+on t.team_api_id = ta.team_api_id 
+where m.goal is not null 
+group by  m.season,t.team_long_name, m.home_team_goal, m.home_team_api_id
+
+/*PLAYERS ANALYSIS*/
+/*how body measures impact chosen performance indicators*/
+
+select distinct p.player_name, p.height, p.weight, left(pa.date,4)::numeric-left(p.birthday, 4)::numeric as age_n, left(pa.date, 4) as rok, 
+max(pa.overall_rating) as max_rating, max(pa.potential) as max_potential, max(pa.stamina) as max_stamina 
+from player p 
+join player_attributes pa 
+on p.player_api_id =pa.player_api_id 
+group by p.player_name, p.height, p.weight,pa.date, left(p.birthday,4)
 
 /*BEST WORLD'S PLAYER ANALYS*/
 
@@ -124,30 +153,6 @@ join player_attributes pa
 on p.player_api_id =pa.player_api_id 
 where p.player_name ilike 'Robert lewandowski' or p.player_name ilike '%messi%'
 group by left(pa.date,4), p.player_name, pa.attacking_work_rate
-
-/*how body measures impact chosen performance indicators*/
-
-select distinct p.player_name, p.height, p.weight, left(pa.date,4)::numeric-left(p.birthday, 4)::numeric as age_n, left(pa.date, 4) as rok, 
-max(pa.overall_rating) as max_rating, max(pa.potential) as max_potential, max(pa.stamina) as max_stamina 
-from player p 
-join player_attributes pa 
-on p.player_api_id =pa.player_api_id 
-group by p.player_name, p.height, p.weight,pa.date, left(p.birthday,4)
-
-
-/*MATCH ANALYSIS*/
-
-/*home team analysis*/
-
-select m.season, t.team_short_name, m.home_team_goal, count(m.match_api_id) as count_match, 
-round(avg(m.home_team_goal) over (partition by m.home_team_api_id, m.season),2) as avg_per_team
-from "_Match" m 
-join team t 
-on t.team_api_id = m.home_team_api_id 
-join team_attributes ta 
-on t.team_api_id = ta.team_api_id 
-where m.goal is not null 
-group by  m.season,t.team_short_name, m.home_team_goal, m.home_team_api_id
 
 
 /*goalkeepers analysis*/
@@ -210,7 +215,17 @@ group by m.season, t.team_long_name, p.player_name
 order by m.season 
 
 
+
 /*team changes and impact on performance*/
+
+select distinct m.season,t.team_long_name, p.player_name, count(m.match_api_id) as numer_matches, sum(home_team_goal) as lost_goals 
+from "_Match" m 
+join player p 
+on m.home_player_1::numeric  = p.player_api_id 
+join team t 
+on m.home_team_api_id = t.team_api_id 
+group by m.season, t.team_long_name, p.player_name
+order by m.season 
 
 
 
