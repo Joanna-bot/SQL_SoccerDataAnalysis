@@ -65,23 +65,170 @@ on t.team_api_id = ta.team_api_id
 
 /*number of vitories, defeats and draws pro team and year*/
 
-select left(v_results.left,4) as year_n, v_results.result, v_results.team_short_name,
+select left(v_results.left,4) as year_n,  v_results.team_short_name, v_results.result,
 	count(result)
 from v_results
 group by left(v_results.left,4), v_results.team_short_name, v_results.result
-order by count(v_results.result)
+order by left(v_results.left,4) 
+
 
 /*team ranking*/
 
-
-select left(v_results.left,4) as year_n, v_results.team_short_name, count(v_results.result) as number_victories,
+/*best teams*/
+select left(v_results.left,4) as year_n, v_results.team_short_name, count(v_results.result) as number_victories, 
 	dense_rank() over (partition by left(v_results.left,4) order by count(v_results.result) desc) as ranking
 from v_results
+where v_results.result='victory'
 group by left(v_results.left,4), v_results.team_short_name
 order by left(v_results.left,4), count(v_results.result) desc, 
 	dense_rank() over (partition by left(v_results.left,4) order by count(v_results.result)) 
-
 	
+
+/*worst teams*/
+
+select left(v_results.left,4) as year_n, v_results.team_short_name, count(v_results.result) as number_defeats,
+	dense_rank() over (partition by left(v_results.left,4) order by count(v_results.result) desc) as ranking
+from v_results
+where v_results.result='defeat'
+group by left(v_results.left,4), v_results.team_short_name
+order by left(v_results.left,4), count(v_results.result) desc, 
+	dense_rank() over (partition by left(v_results.left,4) order by count(v_results.result)) 
+	
+/*team squad per season*/
+
+create view v_TeamPlayers as
+select distinct m.home_player_1 as player_api_id , m.home_team_api_id as team_api_id, m.season
+from"_Match" m 
+where home_player_1 is not null
+union
+select distinct home_player_2 as player_api_id, home_team_api_id as team_api_id, season
+from "_Match" 
+where home_player_2 is not null
+union
+select distinct home_player_3 as player_api_id, home_team_api_id as team_api_id, season
+from "_Match" 
+where home_player_3 is not null
+union
+select distinct home_player_4 as player_api_id, home_team_api_id as team_api_id, season
+from "_Match" 
+where home_player_4 is not null
+union
+select distinct home_player_5 as player_api_id, home_team_api_id as team_api_id, season
+from "_Match" 
+where home_player_5 is not null
+union
+select distinct home_player_6 as player_api_id, home_team_api_id as team_api_id, season
+from "_Match" 
+where home_player_6 is not null
+union
+select distinct home_player_7 as player_api_id, home_team_api_id AS team_api_id, season
+from "_Match" 
+where home_player_7 is not null
+union
+select distinct home_player_8 as player_api_id, home_team_api_id as team_api_id, season
+from "_Match" 
+where home_player_8 is not null
+union
+select distinct home_player_9 as player_api_id, home_team_api_id as team_api_id, season
+from "_Match" 
+where home_player_9 is not null
+union
+select distinct home_player_10 as player_api_id, home_team_api_id as team_api_id, season
+from "_Match" 
+where home_player_10 is not null
+union
+select distinct home_player_11 as player_api_id, home_team_api_id as team_api_id, season
+from "_Match" 
+where home_player_11 is not null
+union
+select distinct away_player_1 as player_api_id, home_team_api_id as team_api_id, season
+from "_Match" 
+where away_player_1 is not null
+union
+select distinct away_player_2 as player_api_id, home_team_api_id as team_api_id, season
+from "_Match" 
+where away_player_2 is not null
+union
+select distinct away_player_3 as player_api_id, home_team_api_id as team_api_id, season
+from "_Match" 
+where away_player_3 is not null
+union
+select distinct away_player_4 as player_api_id, home_team_api_id as team_api_id, season
+from "_Match" 
+where away_player_4 is not null
+union
+select distinct away_player_5 as player_api_id, home_team_api_id as team_api_id, season
+from "_Match" 
+where away_player_5 is not null
+union
+select distinct away_player_6 as player_api_id, home_team_api_id as team_api_id, season
+from "_Match" 
+where away_player_6 is not null
+union
+select distinct away_player_7 as player_api_id, home_team_api_id as team_api_id, season
+from "_Match" 
+where away_player_7 is not null
+union
+select distinct away_player_8 as player_api_id, home_team_api_id as team_api_id, season
+from "_Match" 
+where away_player_8 is not null
+union
+select distinct away_player_9 as player_api_id, home_team_api_id as team_api_id, season
+from "_Match" 
+where away_player_9 is not null
+union
+select distinct away_player_10 as player_api_id, home_team_api_id as team_api_id, season
+from "_Match" 
+where away_player_10 is not null
+union
+select distinct away_player_11 as player_api_id, home_team_api_id as team_api_id, season
+from "_Match" 
+where away_player_11 is not null;
+
+/*team squad with full names*/
+
+select distinct v_TeamPlayers.season, t.team_long_name, p.player_name 
+from v_TeamPlayers
+join team t 
+on v_TeamPlayers.team_api_id::numeric = t.team_api_id::numeric 
+join player p 
+on p.player_api_id::numeric = v_TeamPlayers.player_api_id::numeric
+order by v_TeamPlayers.season, t.team_long_name
+
+
+/*team squad with body measures*/
+
+select distinct v_TeamPlayers.season, t.team_long_name, p.player_name, p.height, p.weight  
+from v_TeamPlayers
+join player p 
+on p.player_api_id::numeric = v_TeamPlayers.player_api_id::numeric
+join team t 
+on v_TeamPlayers.team_api_id::numeric = t.team_api_id::numeric 
+
+
+select distinct v_TeamPlayers.season, t.team_long_name,  
+avg(p.height) over (partition by t.team_long_name, v_TeamPlayers.season) as avg_height,
+avg(p.weight ) over (partition by t.team_long_name, v_TeamPlayers.season) as avg_weight
+from v_TeamPlayers
+join player p 
+on p.player_api_id::numeric = v_TeamPlayers.player_api_id::numeric
+join team t 
+on v_TeamPlayers.team_api_id::numeric = t.team_api_id::numeric 
+order by avg(p.height) over (partition by t.team_long_name, v_TeamPlayers.season), avg(p.weight ) over (partition by t.team_long_name, v_TeamPlayers.season)
+
+
+/*teams and leagues*/
+
+create view v_LeagueTeams as
+select distinct league_id, home_team_api_id
+from "_Match" m 
+where home_team_api_id is not null
+union
+select distinct league_id, away_team_api_id
+from "_Match" 
+where away_team_api_id is not null
+
+
 	
 /*MATCH ANALYSIS*/
 
