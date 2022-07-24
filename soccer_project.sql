@@ -1,5 +1,6 @@
 /*first look at the tables*/
 
+
 select *
 from "_Match" m 
 
@@ -35,6 +36,17 @@ on l.country_id=m.country_id
 group by c.name, l.name, m.season
 order by c.name, l.name, m.season;
 
+/*teams and leagues*/
+
+create view v_LeagueTeams as
+select distinct league_id, home_team_api_id
+from "_Match" m 
+where home_team_api_id is not null
+union
+select distinct league_id, away_team_api_id
+from "_Match" 
+where away_team_api_id is not null
+
 /*TEAM ANALYSIS*/
 
 /*Number matches per team per season*/
@@ -64,7 +76,7 @@ on t.team_api_id = ta.team_api_id
 
 
 /*number of vitories, defeats and draws pro team and year*/
-
+create view v_results_team as
 select left(v_results.left,4) as year_n,  v_results.team_short_name, v_results.result,
 	count(result)
 from v_results
@@ -186,7 +198,7 @@ from "_Match"
 where away_player_11 is not null;
 
 /*team squad with full names*/
-
+create view v_team_squad as
 select distinct v_TeamPlayers.season, t.team_long_name, p.player_name 
 from v_TeamPlayers
 join team t 
@@ -214,19 +226,9 @@ join player p
 on p.player_api_id::numeric = v_TeamPlayers.player_api_id::numeric
 join team t 
 on v_TeamPlayers.team_api_id::numeric = t.team_api_id::numeric 
-order by avg(p.height) over (partition by t.team_long_name, v_TeamPlayers.season), avg(p.weight ) over (partition by t.team_long_name, v_TeamPlayers.season)
+order by avg(p.height) over (partition by t.team_long_name, v_TeamPlayers.season) desc, avg(p.weight ) over (partition by t.team_long_name, v_TeamPlayers.season)
 
 
-/*teams and leagues*/
-
-create view v_LeagueTeams as
-select distinct league_id, home_team_api_id
-from "_Match" m 
-where home_team_api_id is not null
-union
-select distinct league_id, away_team_api_id
-from "_Match" 
-where away_team_api_id is not null
 
 
 	
@@ -365,6 +367,8 @@ order by m.season
 
 /*team changes and impact on performance*/
 
+/*number of matches per season, team and player*/
+
 select distinct m.season,t.team_long_name, p.player_name, count(m.match_api_id) as numer_matches, sum(home_team_goal) as lost_goals 
 from "_Match" m 
 join player p 
@@ -374,9 +378,46 @@ on m.home_team_api_id = t.team_api_id
 group by m.season, t.team_long_name, p.player_name
 order by m.season 
 
+select distinct m.season,t.team_long_name, p.player_name, count(m.match_api_id) as numer_matches, sum(home_team_goal) as lost_goals 
+from "_Match" m 
+join player p 
+on m.home_player_1::numeric  = p.player_api_id 
+join team t 
+on m.home_team_api_id = t.team_api_id 
+group by t.team_long_name, p.player_name, m.season, t.team_long_name
+order by t.team_long_name
+
+/*number of defeats per year, team and player*/
 
 
+select * 
+from v_results_team
+join team t 
+on t.team_short_name = v_results_team.team_short_name
+join v_team_squad
+on left(v_team_squad.season,4) = v_results_team.year_n
+order by t.team_long_name 
+
+/*how many teams the player has played*/
+select v_team_squad.player_name, count(distinct(t.team_short_name)) as number_teams_per_player, v_results_team.year_n
+from v_results_team
+join team t 
+on t.team_short_name = v_results_team.team_short_name
+join v_team_squad
+on left(v_team_squad.season,4) = v_results_team.year_n
+group by year_n, player_name
+order by year_n
 
 
-
+/*has team been changed*/
+select v_team_squad.player_name, v_results_team.year_n, v_results_team.team_short_name,
+case
+	when t.team_short_name != lag(t.team_short_name) over (partition by player_name order by year_n) then 'team changed'
+	else 'team has not changed'
+end as 'team changed?'
+from v_results_team
+join team t 
+on t.team_short_name = v_results_team.team_short_name
+join v_team_squad
+on left(v_team_squad.season,4) = v_results_team.year_n
 
