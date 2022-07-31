@@ -1,10 +1,10 @@
 # SQL_SoccerDataAnalysis
 
-Author: Joanna Borowa
+**Author**: Joanna Borowa
 
-Data source: https://www.kaggle.com/datasets/hugomathien/soccer/version/1
+**Data source**: https://www.kaggle.com/datasets/hugomathien/soccer/version/1
 
-Topic: SQL analysis of soccer teams and players
+**Topic**: SQL analysis of soccer teams and players
 
 The analysis consists of:
 - general findings
